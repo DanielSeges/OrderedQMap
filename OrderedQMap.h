@@ -4,6 +4,9 @@
 #include <QVariant>
 #include <QList>
 #include <QString>
+#include <QJsonArray>
+#include <QJsonValue>
+#include <QJsonDocument>
 #include <QDebug>
 
 /**
@@ -99,7 +102,9 @@ namespace ActionNet
         }
         T & operator[](Key & key)
         {
-          if (!QList<Key>::contains(key))  QList<Key>::append(key);
+          if (!QList<Key>::contains(key))
+             QList<Key>::append(key);
+
           return QMap<Key,T>::operator [](key);
         }
 
@@ -110,7 +115,9 @@ namespace ActionNet
         }
         T & operator[](const Key & key)
         {
-          if (!QList<Key>::contains(key))  QList<Key>::append(key);
+          if (!QList<Key>::contains(key))
+            QList<Key>::append(key);
+
           return QMap<Key,T>::operator [](key);
         }
 
@@ -120,23 +127,22 @@ namespace ActionNet
           return *this;
         }
 
-        void insert(const Key & key, const T & value)
+        typename QMap<Key, T>::iterator insert(const Key & key, const T & value)
         {
-          QMap<Key,T>::insert(key, value);
-          if (!QList<Key>::contains(key))  QList<Key>::append(key);
+          typename QMap<Key, T>::iterator iter = QMap<Key,T>::insert(key, value);
+
+          if (!QList<Key>::contains(key))
+             QList<Key>::append(key);
+
+          return iter;
         }
 
-        void replace(const Key & key, const T & value)
+        Key replaceAt(int index, const T & value)
         {
-          QMap<Key,T>::insert(key, value);
-        }
-
-        void replaceAt(int index, const T & value)
-        {
-          if(index >= QList<Key>::size()) return;
-
           Key key = QList<Key>::at(index);
           QMap<Key,T>::insert(key, value);
+
+          return key;
         }
 
         T at(int index) const
@@ -151,26 +157,29 @@ namespace ActionNet
            return  QMap<Key,T>::value(key);
         }
 
-        void remove(const Key &key)
+        int remove(const Key &key)
         {
            int i = QList<Key>::indexOf(key);
            QList<Key>::removeAt(i);
            QMap<Key,T>::remove(key);
+           return i;
         }
 
-        void removeAt(int i)
+        Key removeAt(int i)
         {
             Key key = this->key(i);
             QList<Key>::removeAt(i);
             QMap<Key,T>::remove(key);
+
+            return key;
         }
 
-        void removeLast()
+        Key removeLast()
         {
-            if(QList<Key>::isEmpty()) return;
-
             Key key = QList<Key>::last();
             this->remove(key);
+
+            return key;
         }
 
         QPair<Key, T> last() const
@@ -184,7 +193,7 @@ namespace ActionNet
            return QPair<Key, T>(key, val);
         }
 
-        bool isEmpty()
+        bool isEmpty() const
         {
           return QMap<Key,T>::isEmpty();
         }
@@ -207,6 +216,19 @@ namespace ActionNet
         const T value(const Key & key, const T & defaultValue) const
         {
           return QMap<Key,T>::value(key, defaultValue);
+        }
+
+        QMap<Key, T> toQMap()
+        {
+            QMap<Key, T> result;
+
+            for(int i = 0; i < size(); ++i)
+            {
+                Key key = key(i);
+                result[key] = value(i);
+            }
+
+            return result;
         }
 
         QList<T> values() const
@@ -246,12 +268,12 @@ namespace ActionNet
            return QMap<Key,T>::size();
         }
 
-        int count() const
+        int count(const Key &key) const
         {
-           return QMap<Key,T>::size();
+           return QMap<Key,T>::count(key);
         }
 
-         QList<Key> keys() const
+        QList<Key> keys() const
         {
            return *this;
         }
@@ -260,6 +282,16 @@ namespace ActionNet
         {
            QMap<Key,T>::clear();
            QList<Key>::clear();
+        }
+
+        OrderedQMap<Key, T>& operator()(const Key & key, const T & value)
+        {
+            QMap<Key,T>::insert(key, value);
+
+            if (!QList<Key>::contains(key))
+              QList<Key>::append(key);
+
+            return *this;
         }
 
         friend QDataStream &operator <<(QDataStream &out, const OrderedQMap<Key,T> &obj)
@@ -282,7 +314,7 @@ namespace ActionNet
           in >> keys >> tmpMap;
 
           for(Key k : keys)
-                obj.insert(k, tmpMap.value(k));
+             obj.insert(k, tmpMap.value(k));
 
           return in;
         }
@@ -324,7 +356,9 @@ namespace ActionNet
         }
         T & operator[](Key & key)
         {
-          if (!QList<Key>::contains(key))  QList<Key>::append(key);
+          if (!QList<Key>::contains(key))
+            QList<Key>::append(key);
+
           return QMap<Key,T>::operator [](key);
         }
 
@@ -335,7 +369,9 @@ namespace ActionNet
         }
         T & operator[](const Key & key)
         {
-          if (!QList<Key>::contains(key))  QList<Key>::append(key);
+          if (!QList<Key>::contains(key))
+            QList<Key>::append(key);
+
           return QMultiMap<Key,T>::operator [](key);
         }
 
@@ -345,42 +381,44 @@ namespace ActionNet
           return *this;
         }
 
-        void insert(const Key & key, const T & value)
+        typename QMap<Key, T>::iterator insert(const Key & key, const T & value)
         {
-          QMultiMap<Key,T>::insert(key, value);
+          typename QMap<Key, T>::iterator iter = QMultiMap<Key,T>::insert(key, value);
           QList<Key>::append(key);
+          return iter;
         }
 
-        void replace(const Key & key, const T & value)
+        typename QMap<Key, T>::iterator replace(const Key & key, const T & value)
         {
-          QMultiMap<Key,T>::insert(key, value);
+          if (!QList<Key>::contains(key))
+            QList<Key>::append(key);
+
+          typename QMap<Key, T>::iterator iter = QMultiMap<Key,T>::replace(key, value);
+          return iter;
         }
 
-        void remove(const Key &key)
+        typename QMap<Key, T>::iterator find(const Key & key) const
+        {
+          return QMultiMap<Key,T>::find(key);
+        }
+
+        int remove(const Key &key)
         {
            QList<Key>::removeAll(key); //QList<Key>::removeAt(i);
-           QMultiMap<Key,T>::remove(key);
-        }
-
-        void removeLast()
-        {
-            if(QList<Key>::isEmpty()) return;
-
-            Key key = QList<Key>::last();
-            this->remove(key);
-
-            QList<Key>::removeLast();
+           int i = QMultiMap<Key,T>::remove(key);
+           return i;
         }
 
         T last() const
         {
-           if(QList<Key>::isEmpty()) return T();
+           if(QList<Key>::isEmpty())
+              return T();
 
            Key key = QList<Key>::last();
            return this->value(key);
         }
 
-        bool isEmpty()
+        bool isEmpty() const
         {
           return QMultiMap<Key,T>::isEmpty();
         }
@@ -415,12 +453,12 @@ namespace ActionNet
            return QMultiMap<Key,T>::size();
         }
 
-        int count() const
+        int count(const Key &key) const
         {
-           return QMultiMap<Key,T>::size();
+           return QMap<Key,T>::count(key);
         }
 
-         QList<Key> keys() const
+        QList<Key> keys() const
         {
            return *this;
         }
@@ -429,6 +467,13 @@ namespace ActionNet
         {
            QMultiMap<Key,T>::clear();
            QList<Key>::clear();
+        }
+
+        OrderedQMultiMap<Key, T>& operator()(const Key & key, const T & value)
+        {
+            QMultiMap<Key,T>::insert(key, value);
+            QList<Key>::append(key);
+            return *this;
         }
 
         friend QDataStream &operator <<(QDataStream &out, const OrderedQMultiMap<Key,T> &obj)
