@@ -1,4 +1,4 @@
-#ifndef ORDEREDQMAP_H
+﻿#ifndef ORDEREDQMAP_H
 #define ORDEREDQMAP_H
 #include <QMap>
 #include <QVariant>
@@ -53,87 +53,69 @@ namespace ActionNet
 {
 
     //ordered QMap that must have UNIQUE keys to get correct results of indexed (...at) methods
-    template <class Key, class T> class OrderedQMap : public QMap<Key,T>, public QList<Key>
+    template <class Key, class T> class OrderedQMap : public QMap<Key,T>, private QList<Key>
     {
         //ToDo
         // Do not use specified functions of QMap until they are not implemented here:
         //    erase(), insertMulti(), swap(), take(), unite()
-        // Do not use specified functions of QList until they are not implemented here.
+        // Do not use write functions of QList until they are not implemented here.
     public:
         using typename QMap<Key,T>::iterator;
         using typename QMap<Key,T>::const_iterator;
 
-        typename QMap<Key,T>::iterator begin()
-        { return QMap<Key,T>::begin(); }
+        typename QMap<Key,T>::iterator begin() { return QMap<Key,T>::begin(); }
 
-        typename QMap<Key,T>::const_iterator begin() const
-        { return QMap<Key,T>::begin(); }
+        typename QMap<Key,T>::const_iterator begin() const { return QMap<Key,T>::begin(); }
 
-        typename QMap<Key,T>::iterator end()
-        { return QMap<Key,T>::end(); }
+        typename QMap<Key,T>::iterator end() { return QMap<Key,T>::end(); }
 
-        typename QMap<Key,T>::const_iterator end() const
-        { return QMap<Key,T>::end(); }
+        typename QMap<Key,T>::const_iterator end() const { return QMap<Key,T>::end(); }
 
         //overrides QList::contains method
-        bool contains(const Key & key) const
-        {
-          return QList<Key>::contains(key);
-        }
+        bool contains(const Key & key) const { return QList<Key>::contains(key); }
 
-        //introduces case (in)sensitive contains lije QStringList has.
-        bool contains(const Key & key, Qt::CaseSensitivity cs) const
+        bool contains(const QString & key, Qt::CaseSensitivity cs) const
         {
-          QString strKey = QVariant(key).toString();
-          QList<Key> keys = this->keys();
-          for (Key k : keys)
-          {
-            QString str = QVariant(k).toString();
-            if (strKey.compare(str, cs) == 0)
-              return true;
-          }
-          return false;
+          //QList<QString> keys = this->keys();
+          QStringList keys = this->keys();
+          return keys.contains(key, cs);
         }
 
         //overrides QList::operator method
-        const T operator[](Key & key) const
-        {
-          return QMap<Key,T>::value(key);
-        }
+        const T operator[](Key & key) const { return QMap<Key,T>::value(key); }
+
         T & operator[](Key & key)
         {
           if (!QList<Key>::contains(key))
              QList<Key>::append(key);
-
           return QMap<Key,T>::operator [](key);
         }
 
         //overrides QMap::operator method
-        const T operator[](const Key & key) const
-        {
-          return QMap<Key,T>::value(key);
-        }
+        const T operator[](const Key & key) const { return QMap<Key,T>::value(key); }
+
         T & operator[](const Key & key)
         {
           if (!QList<Key>::contains(key))
             QList<Key>::append(key);
-
           return QMap<Key,T>::operator [](key);
-        }
-
-        OrderedQMap<Key,T> &operator<< (const QPair<Key,T> &t)
-        {
-          this->insert(t.first, t.second);
-          return *this;
         }
 
         typename QMap<Key, T>::iterator insert(const Key & key, const T & value)
         {
           typename QMap<Key, T>::iterator iter = QMap<Key,T>::insert(key, value);
-
           if (!QList<Key>::contains(key))
              QList<Key>::append(key);
+          return iter;
+        }
 
+        typename QMap<Key, T>::iterator append(const Key & key, const T & value) { return insert(key, value); }
+
+        typename QMap<Key, T>::iterator prepend(const Key & key, const T & value)
+        {
+          typename QMap<Key, T>::iterator iter = QMap<Key,T>::insert(key, value);
+          if (!QList<Key>::contains(key))
+             QList<Key>::prepend(key);
           return iter;
         }
 
@@ -141,7 +123,6 @@ namespace ActionNet
         {
           Key key = QList<Key>::at(index);
           QMap<Key,T>::insert(key, value);
-
           return key;
         }
 
@@ -170,7 +151,6 @@ namespace ActionNet
             Key key = this->key(i);
             QList<Key>::removeAt(i);
             QMap<Key,T>::remove(key);
-
             return key;
         }
 
@@ -178,7 +158,6 @@ namespace ActionNet
         {
             Key key = QList<Key>::last();
             this->remove(key);
-
             return key;
         }
 
@@ -186,50 +165,29 @@ namespace ActionNet
         {
            if(QList<Key>::isEmpty())
              return QPair<Key, T>();
-
            Key key = QList<Key>::last();
            T val = this->value(key);
-
            return QPair<Key, T>(key, val);
         }
 
         bool isEmpty() const
-        {
-          return QMap<Key,T>::isEmpty();
-        }
+        { return QMap<Key,T>::isEmpty(); }
 
         //overrides QList value methods
         const T value(Key & key) const
-        {
-          return QMap<Key,T>::value(key, T());
-        }
+        { return QMap<Key,T>::value(key, T()); }
+
         const T value(Key & key, const T & defaultValue) const
-        {
-          return QMap<Key,T>::value(key, defaultValue);
-        }
+        { return QMap<Key,T>::value(key, defaultValue); }
 
         //overrides QMap value methods
         const T value(const Key & key) const
-        {
-          return QMap<Key,T>::value(key, T());
-        }
+        { return QMap<Key,T>::value(key, T()); }
+
         const T value(const Key & key, const T & defaultValue) const
-        {
-          return QMap<Key,T>::value(key, defaultValue);
-        }
+        { return QMap<Key,T>::value(key, defaultValue); }
 
-        QMap<Key, T> toQMap()
-        {
-            QMap<Key, T> result;
-
-            for(int i = 0; i < size(); ++i)
-            {
-                Key key = key(i);
-                result[key] = value(i);
-            }
-
-            return result;
-        }
+        QMap<Key, T> toQMap() { return *this; }
 
         QList<T> values() const
         {
@@ -246,36 +204,30 @@ namespace ActionNet
           QList<Key> keys = this->keys();
           for (Key key : keys)
             res.append(qMakePair(this->value(key), key));
-
-            if (addEmptyPair)
-            {
-                if (putEmptyPairAsFirst)
-                  res.prepend(qMakePair(T(), Key()));
-                else
-                  res.append(qMakePair(T(), Key()));
-            }
-
+          if (addEmptyPair)
+          {
+              if (putEmptyPairAsFirst)
+                res.prepend(qMakePair(T(), Key()));
+              else
+                res.append(qMakePair(T(), Key()));
+          }
           return res;
         }
 
-        Key key(int index) const
-        {
-          return QList<Key>::value(index);
-        }
+        Key key(int index) const { return QList<Key>::value(index);}
 
-        int size() const
-        {
-           return QMap<Key,T>::size();
-        }
+        int size() const { return QMap<Key,T>::size(); }
 
-        int count(const Key &key) const
-        {
-           return QMap<Key,T>::count(key);
-        }
+        int count(const Key &key) const { return QMap<Key,T>::count(key); }
 
-        QList<Key> keys() const
+        int length() const { return QMap<Key, T>::size(); }
+
+        QList<Key> keys() const { return *this; }
+
+        int keyOrder(const Key &key) const
         {
-           return *this;
+            auto keysTmp = keys();
+            return keysTmp.indexOf(key);
         }
 
         void clear()
@@ -287,21 +239,29 @@ namespace ActionNet
         OrderedQMap<Key, T>& operator()(const Key & key, const T & value)
         {
             QMap<Key,T>::insert(key, value);
-
             if (!QList<Key>::contains(key))
               QList<Key>::append(key);
-
             return *this;
+        }
+
+        OrderedQMap<Key,T> &operator<< (const QPair<Key,T> &t)
+        {
+          this->insert(t.first, t.second);
+          return *this;
+        }
+
+        OrderedQMap<Key,T> &operator>> (const QPair<Key,T> &t)
+        {
+          this->prepend(t.first, t.second);
+          return *this;
         }
 
         friend QDataStream &operator <<(QDataStream &out, const OrderedQMap<Key,T> &obj)
         {
           QList<Key> keys = obj.keys();
           QMap<Key, T> tmpMap;
-
           for(Key k : keys)
               tmpMap.insert(k, obj.value(k));
-
           out << obj.keys() << tmpMap;
           return out;
         }
@@ -310,30 +270,24 @@ namespace ActionNet
         {
           QList<Key> keys;
           QMap<Key, T> tmpMap;
-
           in >> keys >> tmpMap;
-
           for(Key k : keys)
              obj.insert(k, tmpMap.value(k));
-
           return in;
         }
 
     };
 
-    template <class Key, class T> class OrderedQMultiMap : public QMultiMap<Key,T>, public QList<Key>
+    template <class Key, class T> class OrderedQMultiMap : public QMultiMap<Key,T>, private QList<Key>
     {
         //ToDo
         // Do not use specified functions of QMultiMap until they are not implemented here:
         //    erase(), swap(), take(), unite()
-        // Do not use specified functions of QList until they are not implemented here.
+        // Do not use write functions of QList until they are not implemented here.
 
     public:
         //overrides QList::contains method
-        bool contains(const Key & key) const
-        {
-          return QList<Key>::contains(key);
-        }
+        bool contains(const Key & key) const { return QList<Key>::contains(key); }
 
         //introduces case (in)sensitive contains lije QStringList has.
         bool contains(const Key & key, Qt::CaseSensitivity cs) const
@@ -350,35 +304,24 @@ namespace ActionNet
         }
 
         //overrides QList::operator method
-        const T operator[](Key & key) const
-        {
-          return QMultiMap<Key,T>::value(key);
-        }
+        const T operator[](Key & key) const { return QMultiMap<Key,T>::value(key); }
+
         T & operator[](Key & key)
         {
           if (!QList<Key>::contains(key))
             QList<Key>::append(key);
-
           return QMap<Key,T>::operator [](key);
         }
 
         //overrides QMultiMap::operator method
-        const T operator[](const Key & key) const
-        {
-          return QMultiMap<Key,T>::value(key);
-        }
+        const T operator[](const Key & key) const { return QMultiMap<Key,T>::value(key); }
+
         T & operator[](const Key & key)
         {
           if (!QList<Key>::contains(key))
             QList<Key>::append(key);
 
           return QMultiMap<Key,T>::operator [](key);
-        }
-
-        OrderedQMultiMap<Key,T> &operator<< (const QPair<Key,T> &t)
-        {
-          this->insert(t.first, t.second);
-          return *this;
         }
 
         typename QMap<Key, T>::iterator insert(const Key & key, const T & value)
@@ -388,19 +331,25 @@ namespace ActionNet
           return iter;
         }
 
+        typename QMap<Key, T>::iterator append(const Key & key, const T & value) { return insert(key, value); }
+
+        typename QMap<Key, T>::iterator prepend(const Key & key, const T & value)
+        {
+          typename QMap<Key, T>::iterator iter = QMultiMap<Key,T>::insert(key, value);
+          if (!QList<Key>::contains(key))
+             QList<Key>::prepend(key);
+          return iter;
+        }
+
         typename QMap<Key, T>::iterator replace(const Key & key, const T & value)
         {
           if (!QList<Key>::contains(key))
             QList<Key>::append(key);
-
           typename QMap<Key, T>::iterator iter = QMultiMap<Key,T>::replace(key, value);
           return iter;
         }
 
-        typename QMap<Key, T>::iterator find(const Key & key) const
-        {
-          return QMultiMap<Key,T>::find(key);
-        }
+        typename QMap<Key, T>::iterator find(const Key & key) const { return QMultiMap<Key,T>::find(key); }
 
         int remove(const Key &key)
         {
@@ -413,55 +362,31 @@ namespace ActionNet
         {
            if(QList<Key>::isEmpty())
               return T();
-
            Key key = QList<Key>::last();
            return this->value(key);
         }
 
-        bool isEmpty() const
-        {
-          return QMultiMap<Key,T>::isEmpty();
-        }
+        bool isEmpty() const { return QMultiMap<Key,T>::isEmpty(); }
 
         //overrides QList value methods
-        const T value(Key & key) const
-        {
-          return QMultiMap<Key,T>::value(key, T());
-        }
-        const T value(Key & key, const T & defaultValue) const
-        {
-          return QMultiMap<Key,T>::value(key, defaultValue);
-        }
+        const T value(Key & key) const { return QMultiMap<Key,T>::value(key, T()); }
+
+        const T value(Key & key, const T & defaultValue) const { return QMultiMap<Key,T>::value(key, defaultValue); }
 
         //overrides QMultiMap value methods
-        const T value(const Key & key) const
-        {
-          return QMultiMap<Key,T>::value(key, T());
-        }
-        const T value(const Key & key, const T & defaultValue) const
-        {
-          return QMultiMap<Key,T>::value(key, defaultValue);
-        }
+        const T value(const Key & key) const { return QMultiMap<Key,T>::value(key, T()); }
 
-        Key key(int index) const
-        {
-          return QList<Key>::value(index);
-        }
+        const T value(const Key & key, const T & defaultValue) const { return QMultiMap<Key,T>::value(key, defaultValue); }
 
-        int size() const
-        {
-           return QMultiMap<Key,T>::size();
-        }
+        Key key(int index) const { return QList<Key>::value(index); }
 
-        int count(const Key &key) const
-        {
-           return QMap<Key,T>::count(key);
-        }
+        int size() const { return QMultiMap<Key,T>::size(); }
 
-        QList<Key> keys() const
-        {
-           return *this;
-        }
+        int count(const Key &key) const { return QMap<Key,T>::count(key); }
+
+        int length() const { return QMap<Key, T>::size(); }
+
+        QList<Key> keys() const {return *this;}
 
         void clear()
         {
@@ -476,14 +401,19 @@ namespace ActionNet
             return *this;
         }
 
+
+        OrderedQMultiMap<Key,T> &operator<< (const QPair<Key,T> &t)
+        {
+          this->insert(t.first, t.second);
+          return *this;
+        }
+
         friend QDataStream &operator <<(QDataStream &out, const OrderedQMultiMap<Key,T> &obj)
         {
           QList<Key> keys = obj.keys();
           QMultiMap<Key, T> tmpMap;
-
           for(Key k : keys)
               tmpMap.insert(k, obj.value(k));
-
           out << obj.keys() << tmpMap;
           return out;
         }
@@ -492,16 +422,19 @@ namespace ActionNet
         {
           QList<Key> keys;
           QMultiMap<Key, T> tmpMap;
-
           in >> keys >> tmpMap;
-
           for(Key k : keys)
                 obj.insert(k, tmpMap.value(k));
-
           return in;
         }
+
+        QMultiMap<Key,T> toQMap() { return *this; }
 
     };
 
 }
+
+typedef ActionNet::OrderedQMap<QString, QVariant> QVariantOrderedQMap;
+Q_DECLARE_METATYPE(QVariantOrderedQMap)
+
 #endif // ORDEREDQMAP_H
